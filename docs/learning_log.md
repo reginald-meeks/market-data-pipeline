@@ -42,3 +42,37 @@ airflow-init: clean exit code 0.
 Alpha Vantage API: returns 100 trading days of AAPL daily pricing.
 All values returned as strings — type conversion needed in transform layer.
 Field names have numbered prefixes ("1. open") — will need cleaning on Day 3.
+
+---
+
+## Day 2
+### What I built
+Created scripts/init_db.sql to auto-create the raw_market_data staging table in
+Postgres on first startup — switched database context with \c market_data before
+the CREATE TABLE statement. Wrote src/ingestion/ingest.py — loads the API key
+from .env, calls Alpha Vantage for AAPL daily pricing, connects to Postgres via
+psycopg2, and inserts each trading day as a row into raw_market_data. Verified
+100 rows landed correctly by querying the table directly. Identified duplicate
+insertion behavior — running the script twice produces 200 rows with no conflict
+handling, which is an expected staging layer tradeoff to be hardened on Day 7.
+
+### What confused me
+Nothing blocked me today. psycopg2 mapped directly onto JDBC concepts I already
+knew — connection, cursor, execute, commit, close. The Python syntax was easier
+to follow once Java equivalents were shown side by side. The duplicate insertion
+behavior was surprising at first but made sense once I understood the staging
+table's role — raw data lands untouched, conflict handling comes later.
+
+### How I resolved it
+No major resolution needed. Understanding that the staging table is a raw landing
+zone, not a source of truth, reframed the duplicate behavior from a bug to an
+expected tradeoff. The fix is intentionally deferred to Day 7.
+
+### Performance notes
+100 rows inserted in a single script run — one row per trading day returned by
+the API. Duplicate behavior confirmed: re-running without truncating doubles the
+row count. No unique constraint on staging table by design — raw data lands
+untouched, idempotency handled in Day 7. Table reset to 100 clean rows before
+Day 3.
+
+---
