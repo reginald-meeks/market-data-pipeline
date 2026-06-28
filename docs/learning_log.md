@@ -2,6 +2,8 @@
 
 ## Progress
 Day 1: Project setup, Docker Compose, Airflow + Postgres running, API verified
+Day 2: Raw ingestion layer, Alpha Vantage to Postgres staging table
+Day 3: Transformation layer — raw staging data cleaned and loaded into processed_market_data
 
 ---
 
@@ -76,3 +78,35 @@ untouched, idempotency handled in Day 7. Table reset to 100 clean rows before
 Day 3.
 
 ---
+
+## Day 3
+### What I built
+Created processed_market_data table in init_db.sql with proper types — NUMERIC
+for prices, BIGINT for volume, DATE for trade_date. Wrote src/transform/transform.py
+using pandas and SQLAlchemy — reads 100 rows from raw_market_data into a DataFrame,
+converts all price columns from TEXT to float, volume from TEXT to int, trade_date
+to a proper datetime, drops the raw id column, and writes clean records into
+processed_market_data. Verified data landed with correct types in Postgres.
+
+### What confused me
+Python syntax and functions were the main source of confusion throughout the day
+since this is my first real Python project. The errors were the hardest part —
+seeing a long stack trace with SQLAlchemy and psycopg2 internals mixed together
+made it difficult to know where to even start reading. Without guidance I wouldn't
+have known what the error was actually telling me versus what was noise.
+
+### How I resolved it
+Java equivalents helped ground the new syntax — seeing psycopg2 next to raw JDBC
+and SQLAlchemy next to JdbcTemplate made the abstraction layers click. For the
+errors, working through them with explanation of what each line meant helped
+identify the actual cause rather than just the symptom. Going forward the goal
+is to be able to read errors independently and trace them back to the source —
+that's the skill that lets me say in an interview that I found it, debugged it,
+and fixed it myself.
+
+### Performance notes
+100 rows read from staging, transformed in memory, written to processed table in
+one script run. Type conversion confirmed — prices stored as NUMERIC, volume as
+BIGINT, trade_date as DATE. SQLAlchemy required over raw psycopg2 for pandas
+compatibility — psycopg2 handles direct SQL execution, SQLAlchemy provides the
+standardized interface pandas expects.
