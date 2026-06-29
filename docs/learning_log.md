@@ -4,6 +4,8 @@
 Day 1: Project setup, Docker Compose, Airflow + Postgres running, API verified
 Day 2: Raw ingestion layer, Alpha Vantage to Postgres staging table
 Day 3: Transformation layer — raw staging data cleaned and loaded into processed_market_data
+Day 4: Data quality & validation layer — null, numeric, range, duplicate checks, quarantine table live
+
 
 ---
 
@@ -110,3 +112,34 @@ one script run. Type conversion confirmed — prices stored as NUMERIC, volume a
 BIGINT, trade_date as DATE. SQLAlchemy required over raw psycopg2 for pandas
 compatibility — psycopg2 handles direct SQL execution, SQLAlchemy provides the
 standardized interface pandas expects.
+
+---
+
+## Day 4
+### What I built
+Added quarantine_market_data table to init_db.sql with TEXT columns for all price
+and volume fields — stores bad records exactly as they came in without type casting.
+Wrote src/validation/validate.py with four validation checks: null check (required
+fields cannot be empty), numeric check (price and volume fields must be convertible
+to float), range check (all prices and volume must be greater than 0), and duplicate
+check (symbol + trade_date combination must be unique). Invalid records are tagged
+with a reason and written to quarantine_market_data. Verified by injecting a
+negative open price record — caught and quarantined correctly, 100 valid records
+passed through cleanly.
+
+### What confused me
+
+### How I resolved it
+
+### Performance notes
+100 valid records, 0 quarantined on clean Alpha Vantage data. Injected one bad
+record (negative open price) — caught by range check, written to quarantine with
+reason "failed validation", original bad value preserved as TEXT. Validation runs
+in memory using pandas boolean masks — entire columns checked at once rather than
+row by row.
+
+---
+
+
+
+---

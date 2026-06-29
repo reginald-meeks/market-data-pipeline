@@ -25,3 +25,17 @@ CREATE TABLE processed_market_data (
     volume BIGINT,
     ingested_at TIMESTAMP DEFAULT NOW()
 );
+
+CREATE TABLE quarantine_market_data (
+    id SERIAL PRIMARY KEY,
+    symbol TEXT,
+    trade_date TEXT,
+    open_price TEXT,
+    high_price TEXT,
+    low_price TEXT,
+    close_price TEXT,
+    volume TEXT,
+    ingested_at TIMESTAMP DEFAULT NOW(),
+    reason TEXT,
+    quarantined_at TIMESTAMP DEFAULT NOW()
+);
