@@ -6,6 +6,8 @@ Day 2: Raw ingestion layer, Alpha Vantage to Postgres staging table
 Day 3: Transformation layer — raw staging data cleaned and loaded into processed_market_data
 Day 4: Data quality & validation layer — null, numeric, range, duplicate checks, quarantine table live
 Day 5: Airflow DAG wired up, pipeline runs end to end — ingest → validate → transform
+Day 6: DAG hardened — retries, failure handling, schedule confirmed
+
 
 
 ---
@@ -175,6 +177,36 @@ Full pipeline run duration: ~3 seconds end to end.
 ingest: ~1s, validate: ~1s, transform: ~1s.
 Scheduled run triggered automatically for 2026-06-28 on DAG unpause.
 100 rows ingested, 100 validated, 100 transformed successfully.
+
+---
+
+## Day 6
+### What I built
+Hardened market_pipeline_dag.py with production-grade configuration. Added
+default_args with retries=3 and retry_delay=5 minutes — transient failures
+like API timeouts will retry automatically before marking a task failed.
+Added on_failure_callback that logs the failed task id, DAG id, and execution
+time when all retries are exhausted. Updated schedule_interval to schedule
+to resolve Airflow 3 deprecation warning. Verified full pipeline run still
+succeeds end to end after changes.
+
+### What confused me
+The placement of new components in the DAG file wasn't immediately obvious —
+specifically where the failure callback function and default_args dictionary
+should live relative to the DAG constructor and imports. Python file structure
+is less rigid than Java class structure, so the conventions took a moment to
+internalize.
+
+### How I resolved it
+Reasoned through it by thinking about Python's top-to-bottom execution order —
+a function must be defined before it's referenced, and default_args must exist
+before it's passed to the DAG constructor. Once I applied that mental model the
+placement became logical rather than arbitrary.
+
+### Performance notes
+Full pipeline run: all three tasks succeeded, same ~3 second total duration.
+Retries configured: 3 attempts, 5 minute delay between attempts.
+on_failure_callback fires after all retries exhausted — not on first failure.
 
 ---
 

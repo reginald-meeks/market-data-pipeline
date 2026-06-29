@@ -1,6 +1,6 @@
 from airflow import DAG
 from airflow.operators.python import PythonOperator
-from datetime import datetime
+from datetime import datetime, timedelta
 import sys
 
 sys.path.insert(0, '/opt/airflow/src')
@@ -9,11 +9,23 @@ from ingestion.ingest import run_ingestion
 from validation.validate import run_validation
 from transform.transform import run_transform
 
+def on_failure_callback(context):
+    print(f"Task failed: {context['task_instance'].task_id}")
+    print(f"DAG: {context['task_instance'].dag_id}")
+    print(f"Execution time: {context['execution_date']}")
+
+default_args = {
+    "retries": 3,
+    "retry_delay": timedelta(minutes=5),
+    "on_failure_callback": on_failure_callback
+}
+
 with DAG(
     dag_id="market_pipeline",
     start_date=datetime(2026, 1, 1),
-    schedule_interval="@daily",
-    catchup=False
+    schedule="@daily",
+    catchup=False,
+    default_args = default_args
 ) as dag:
     ingest_task = PythonOperator(
         task_id="ingest",
