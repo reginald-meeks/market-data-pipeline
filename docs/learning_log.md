@@ -128,8 +128,13 @@ negative open price record — caught and quarantined correctly, 100 valid recor
 passed through cleanly.
 
 ### What confused me
+Nothing significantly confused me today. The validation concepts were
+straightforward and the pandas patterns from Day 3 carried over cleanly.
+In hindsight the skeleton approach meant I wasn't writing enough Python
+myself — changing that going forward.
 
 ### How I resolved it
+N/A — no major blockers this session.
 
 ### Performance notes
 100 valid records, 0 quarantined on clean Alpha Vantage data. Injected one bad
