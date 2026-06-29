@@ -5,6 +5,7 @@ Day 1: Project setup, Docker Compose, Airflow + Postgres running, API verified
 Day 2: Raw ingestion layer, Alpha Vantage to Postgres staging table
 Day 3: Transformation layer — raw staging data cleaned and loaded into processed_market_data
 Day 4: Data quality & validation layer — null, numeric, range, duplicate checks, quarantine table live
+Day 5: Airflow DAG wired up, pipeline runs end to end — ingest → validate → transform
 
 
 ---
@@ -142,6 +143,38 @@ record (negative open price) — caught by range check, written to quarantine wi
 reason "failed validation", original bad value preserved as TEXT. Validation runs
 in memory using pandas boolean masks — entire columns checked at once rather than
 row by row.
+
+---
+
+## Day 5
+### What I built
+Created dags/market_pipeline_dag.py — defined a DAG with id "market_pipeline",
+@daily schedule, catchup=False. Wrapped ingest.py, validate.py, and transform.py
+logic into run_ingestion(), run_validation(), and run_transform() functions callable
+by Airflow. Configured PythonOperator tasks for each stage and wired dependencies
+with >> operator: ingest >> validate >> transform. Added _PIP_ADDITIONAL_REQUIREMENTS
+to docker-compose.yml so Airflow containers install required packages on startup.
+Updated all connection strings from localhost to postgres service name. Verified
+full pipeline run via Airflow scheduler logs — all three tasks exited with code 0.
+
+### What confused me
+The Airflow UI was disorienting at first — Grid view, Graph view, task states,
+run IDs, and log navigation are all new concepts with no prior reference point.
+Triggering a run and knowing where to look for results wasn't intuitive. Reading
+logs through the terminal ended up being clearer than hunting through the UI.
+
+### How I resolved it
+Switched to reading task logs directly via docker exec rather than navigating
+the UI — that gave clean, readable output for each task. The UI made more sense
+once the pipeline was actually running and I could see the three tasks lighting
+up in the Graph view. Understanding came from seeing it work, not from the
+interface itself.
+
+### Performance notes
+Full pipeline run duration: ~3 seconds end to end.
+ingest: ~1s, validate: ~1s, transform: ~1s.
+Scheduled run triggered automatically for 2026-06-28 on DAG unpause.
+100 rows ingested, 100 validated, 100 transformed successfully.
 
 ---
 

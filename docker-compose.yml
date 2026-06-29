@@ -8,6 +8,7 @@ x-airflow-common:
     AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://airflow:airflow@postgres/airflow
     AIRFLOW__CORE__LOAD_EXAMPLES: 'false'
     ALPHA_VANTAGE_API_KEY: ${ALPHA_VANTAGE_API_KEY}
+    _PIP_ADDITIONAL_REQUIREMENTS: "requests psycopg2-binary pandas sqlalchemy python-dotenv"
   volumes:
     - ./dags:/opt/airflow/dags
     - ./src:/opt/airflow/src
