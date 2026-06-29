@@ -1,10 +1,7 @@
 import pandas as pd
 from sqlalchemy import create_engine
-from dotenv import load_dotenv
 
 def run_validation():
-    load_dotenv()
-
     engine = create_engine("postgresql+psycopg2://airflow:airflow@postgres:5432/market_data")
 
     df = pd.read_sql("SELECT * FROM raw_market_data", engine)
@@ -53,3 +50,6 @@ def run_validation():
     print(f"Quarantined records: {len(invalid_df)}")
 
     engine.dispose()
+
+if __name__ == "__main__":
+    run_validation()

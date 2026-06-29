@@ -7,6 +7,8 @@ Day 3: Transformation layer — raw staging data cleaned and loaded into process
 Day 4: Data quality & validation layer — null, numeric, range, duplicate checks, quarantine table live
 Day 5: Airflow DAG wired up, pipeline runs end to end — ingest → validate → transform
 Day 6: DAG hardened — retries, failure handling, schedule confirmed
+Day 7: Idempotent design — unique constraints, upserts, pipeline safely re-runnable
+
 
 
 
@@ -207,6 +209,44 @@ placement became logical rather than arbitrary.
 Full pipeline run: all three tasks succeeded, same ~3 second total duration.
 Retries configured: 3 attempts, 5 minute delay between attempts.
 on_failure_callback fires after all retries exhausted — not on first failure.
+
+---
+
+## Day 7
+### What I built
+Added unique constraints on (symbol, trade_date) to raw_market_data and
+processed_market_data in init_db.sql — named uq_raw_symbol_date and
+uq_processed_symbol_date. Updated ingest.py INSERT to use ON CONFLICT
+(symbol, trade_date) DO NOTHING — duplicate records are skipped silently
+rather than failing. Replaced df.to_sql() in transform.py with a manual
+upsert loop using SQLAlchemy text() and ON CONFLICT DO NOTHING. Removed
+load_dotenv() from all three pipeline scripts — Docker Compose injects
+ALPHA_VANTAGE_API_KEY directly as an environment variable. Added
+if __name__ == "__main__" blocks to all three scripts so they can be run
+directly for testing. Verified idempotency — running ingest and transform
+twice keeps row counts at exactly 100.
+
+### What confused me
+Three bugs slowed down Day 7. First, load_dotenv() was silently doing nothing
+inside the container because the .env file wasn't at the path Python expected —
+no error, just no API key. Second, running the scripts directly produced no output
+because the functions were never actually called — Python loads the file, sees a
+function definition, and exits without running anything. Third, conn.commit()
+threw an AttributeError because SQLAlchemy 2.x Connection objects don't have a
+commit() method directly.
+
+### How I resolved it
+For the dotenv issue — removed load_dotenv() entirely since Docker Compose already
+injects the API key as an environment variable. For the silent script issue — added
+if __name__ == "__main__" blocks so scripts can be run directly for testing without
+affecting how Airflow imports them. For the commit issue — replaced conn.commit()
+with conn.execute(text("COMMIT")) which works with SQLAlchemy's connection API.
+
+### Performance notes
+Idempotency verified: ingest run twice → 100 rows (not 200).
+Transform run twice → 100 rows in processed_market_data (not 200).
+ON CONFLICT DO NOTHING skips duplicates silently — no errors, no extra rows.
+Full DAG run succeeded: all three tasks exit code 0.
 
 ---
 
