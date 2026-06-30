@@ -8,6 +8,7 @@ Day 4: Data quality & validation layer — null, numeric, range, duplicate check
 Day 5: Airflow DAG wired up, pipeline runs end to end — ingest → validate → transform
 Day 6: DAG hardened — retries, failure handling, schedule confirmed
 Day 7: Idempotent design — unique constraints, upserts, pipeline safely re-runnable
+Day 8: Analytics layer — 7-day moving average computed and stored in market_analytics
 
 
 
@@ -247,6 +248,39 @@ Idempotency verified: ingest run twice → 100 rows (not 200).
 Transform run twice → 100 rows in processed_market_data (not 200).
 ON CONFLICT DO NOTHING skips duplicates silently — no errors, no extra rows.
 Full DAG run succeeded: all three tasks exit code 0.
+
+---
+
+## Day 8
+### What I built
+Added market_analytics table to init_db.sql with a composite unique constraint
+on (symbol, trade_date). Wrote src/analytics/analytics.py — reads from
+processed_market_data, computes a 7-day moving average using a SQL window
+function (AVG OVER PARTITION BY symbol ORDER BY trade_date ROWS BETWEEN 6
+PRECEDING AND CURRENT ROW), and writes results into market_analytics via
+upsert. Wired run_analytics into the DAG as a fourth PythonOperator task,
+extending the dependency chain to ingest >> validate >> transform >> analyze.
+Verified 100 rows in market_analytics with correct moving averages.
+
+### What confused me
+Nothing significantly blocked me today. The window function syntax was new
+but the concept clicked once I understood the sliding window model — average
+of the current row and the 6 before it, recalculated for every date. The main
+mistake was copying the INSERT from transform.py without updating the table
+name and columns — caught it quickly once I compared the analytics table schema
+against what I was inserting.
+
+### How I resolved it
+Tested the window function SQL directly in Postgres before writing any Python —
+seeing the output confirmed the logic was right before wiring it into the script.
+Fixed the INSERT by referencing market_analytics columns instead of
+processed_market_data columns.
+
+### Performance notes
+100 rows computed and written to market_analytics in one script run.
+Window function correctly handles edge cases — first row average equals its
+own close price, full 7-day window kicks in at row 7.
+All four DAG tasks succeeded: ingest → validate → transform → analyze.
 
 ---
 

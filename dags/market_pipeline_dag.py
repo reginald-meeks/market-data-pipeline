@@ -8,6 +8,7 @@ sys.path.insert(0, '/opt/airflow/src')
 from ingestion.ingest import run_ingestion
 from validation.validate import run_validation
 from transform.transform import run_transform
+from analytics.analytics import run_analytics
 
 def on_failure_callback(context):
     print(f"Task failed: {context['task_instance'].task_id}")
@@ -42,5 +43,10 @@ with DAG(
         python_callable=run_transform,
         dag=dag
     )
-    ingest_task >> validate_task >> transform_task
+    analytics_task = PythonOperator(
+        task_id="analyze",
+        python_callable=run_analytics,
+        dag=dag
+    )
+    ingest_task >> validate_task >> transform_task >> analytics_task
 

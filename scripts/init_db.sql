@@ -41,3 +41,13 @@ CREATE TABLE quarantine_market_data (
     reason TEXT,
     quarantined_at TIMESTAMP DEFAULT NOW()
 );
+
+CREATE TABLE market_analytics (
+    id SERIAL PRIMARY KEY,
+    symbol TEXT,
+    trade_date DATE,
+    close_price NUMERIC,
+    moving_avg_7day NUMERIC,
+    calculated_at TIMESTAMP DEFAULT NOW(),
+    CONSTRAINT uq_symbol_date UNIQUE (symbol, trade_date)
+);
