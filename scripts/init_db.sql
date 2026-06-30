@@ -51,3 +51,15 @@ CREATE TABLE market_analytics (
     calculated_at TIMESTAMP DEFAULT NOW(),
     CONSTRAINT uq_symbol_date UNIQUE (symbol, trade_date)
 );
+
+CREATE TABLE pipeline_metrics (
+    id SERIAL PRIMARY KEY,
+    dag_id TEXT,
+    task_id TEXT,
+    run_id TEXT,
+    rows_processed INTEGER,
+    status TEXT,
+    started_at TIMESTAMP,
+    ended_at TIMESTAMP,
+    duration_seconds NUMERIC
+);

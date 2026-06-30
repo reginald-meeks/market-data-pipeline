@@ -1,8 +1,13 @@
 import requests
 import os
 import psycopg2
+import sys
+sys.path.insert(0, '/opt/airflow/src')
+from utils import log_metrics
+from datetime import datetime
 
 def run_ingestion():
+    started_at = datetime.now()
     api_key = os.getenv("ALPHA_VANTAGE_API_KEY")
 
     url = f"https://www.alphavantage.co/query?function=TIME_SERIES_DAILY&symbol=AAPL&apikey={api_key}"
@@ -39,6 +44,9 @@ def run_ingestion():
     cursor.close()
     conn.close()
     print("Ingestion complete.")
+
+    log_metrics("market_pipeline", "ingest", "manual", len(time_series), "success", started_at, datetime.now())
+
 
 if __name__ == "__main__":
     run_ingestion()

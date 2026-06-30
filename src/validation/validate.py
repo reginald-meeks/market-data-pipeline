@@ -1,7 +1,13 @@
 import pandas as pd
 from sqlalchemy import create_engine
+import sys
+sys.path.insert(0, '/opt/airflow/src')
+from utils import log_metrics
+from datetime import datetime
+
 
 def run_validation():
+    started_at = datetime.now()
     engine = create_engine("postgresql+psycopg2://airflow:airflow@postgres:5432/market_data")
 
     df = pd.read_sql("SELECT * FROM raw_market_data", engine)
@@ -50,6 +56,9 @@ def run_validation():
     print(f"Quarantined records: {len(invalid_df)}")
 
     engine.dispose()
+
+    log_metrics("market_pipeline", "validate", "manual", len(valid_df), "success", started_at, datetime.now())
+
 
 if __name__ == "__main__":
     run_validation()

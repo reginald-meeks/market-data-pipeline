@@ -2,7 +2,6 @@ from airflow import DAG
 from airflow.operators.python import PythonOperator
 from datetime import datetime, timedelta
 import sys
-
 sys.path.insert(0, '/opt/airflow/src')
 
 from ingestion.ingest import run_ingestion

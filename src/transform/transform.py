@@ -1,7 +1,13 @@
 import pandas as pd
 from sqlalchemy import create_engine, text
+import sys
+sys.path.insert(0, '/opt/airflow/src')
+from utils import log_metrics
+from datetime import datetime
+
 
 def run_transform():
+    started_at = datetime.now()
     engine = create_engine("postgresql+psycopg2://airflow:airflow@postgres:5432/market_data")
 
     df = pd.read_sql("SELECT * FROM raw_market_data", engine)
@@ -36,6 +42,8 @@ def run_transform():
             )
         conn.execute(text("COMMIT"))
     print(f"Transformed {len(df)} rows into processed_market_data.")
+
+    log_metrics("market_pipeline", "transform", "manual", len(df), "success", started_at, datetime.now())
 
 if __name__ == "__main__":
     run_transform()

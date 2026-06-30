@@ -9,7 +9,7 @@ Day 5: Airflow DAG wired up, pipeline runs end to end — ingest → validate �
 Day 6: DAG hardened — retries, failure handling, schedule confirmed
 Day 7: Idempotent design — unique constraints, upserts, pipeline safely re-runnable
 Day 8: Analytics layer — 7-day moving average computed and stored in market_analytics
-
+Day 9: Logging + observability — pipeline_metrics table tracking duration, rows, and status per task
 
 
 
@@ -281,6 +281,38 @@ processed_market_data columns.
 Window function correctly handles edge cases — first row average equals its
 own close price, full 7-day window kicks in at row 7.
 All four DAG tasks succeeded: ingest → validate → transform → analyze.
+
+---
+
+## Day 9
+### What I built
+Created pipeline_metrics table in init_db.sql to store per-task run metadata.
+Wrote src/utils.py with a log_metrics() function — takes dag_id, task_id,
+run_id, rows_processed, status, started_at, ended_at, calculates duration_seconds
+internally, and inserts one row into pipeline_metrics via psycopg2. Added
+sys.path.insert to all four pipeline scripts so they can import utils.py from
+the src/ parent directory. Wired log_metrics() into ingest, validate, transform,
+and analytics — each captures started_at at function start and calls log_metrics
+after completing its work. Verified two full pipeline runs produced 8 rows in
+pipeline_metrics with correct durations and status.
+
+### What confused me
+The only friction today was the ModuleNotFoundError when importing utils —
+Python looked for utils.py in the script's own directory rather than the
+src/ parent directory. Not obvious until you hit the error.
+
+### How I resolved it
+Added sys.path.insert(0, '/opt/airflow/src') to each script so Python knows
+to look in the src/ directory when resolving imports. Same pattern already
+used in the DAG file — just needed to apply it consistently to the pipeline
+scripts themselves.
+
+### Performance notes
+Two complete pipeline runs logged — 8 rows total in pipeline_metrics.
+Ingest: ~0.4–0.5s (API call dominates). Validate: ~0.01–0.06s.
+Transform: ~0.04–0.06s. Analytics: ~0.04–0.05s.
+Ingest is consistently the slowest task due to the external API call —
+all other stages are database-bound and complete in under 100ms.
 
 ---
 
